@@ -30,3 +30,4 @@ breyta geilsum í sívert
 breyta slögum á Geiger mæli í sívert
 skoða meira um Gammarófsmæla og jónunarhylki
 rekna skílingu mismunandi efna gegn geislun
+a
