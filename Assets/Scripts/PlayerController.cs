@@ -1,101 +1,68 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    // speed
-    public float moveSpeed;
-    public float groundDrag;
+    [SerializeField] private float speed = 5f;
+    [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] private float gravity = -9f;
 
-    // jump things
-    public float jumpForce;
-    public float jumpCooldown;
-    public float airMultiplier;
-    private bool readyToJump;
-    public KeyCode jumpKey = KeyCode.Space;
+    [SerializeField] private float lookSpeed = 2f;
+    [SerializeField] private float lookXLimit = 80f;
 
-    // ground check
-    public float playerHeight;
-    public LayerMask whatIsGround;
-    bool grounded;
 
-    // other - I am tired
-    public Transform playerBody;
-    public float mouseSensitivity;
-    float mouseX;
-    float mouseY;
-    float horizontalInput;
-    float verticalInput;
-    Vector3 moveDir;
-    Rigidbody rb;
+    private float rotationX = 0f;
+    private CharacterController controller;
+    private Vector2 moveInput;
+    private Vector3 velocity;
+    private Vector2 lookInput;
+    private Camera playerCamera;
+
+
+
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true;
-        readyToJump = true;
-        // Cursor.lockState = CursorLockMode.Locked;
+        playerCamera = Camera.main;
+        // Cursor.lockState = CursorLockMode.Locked;  // uncomment later
+        // Cursor.visible = false; // uncomment later
+        controller = GetComponent<CharacterController>();
+    }
+
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        moveInput = context.ReadValue<Vector2>(); // færa input
+    }
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (context.performed && controller.isGrounded)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity); // hoppa
+        }
+    }
+
+    public void OnLook(InputAction.CallbackContext context)
+    {
+        lookInput = context.ReadValue<Vector2>();
     }
 
     // Update is called once per frame
-    private void Update()
+    void Update()
     {
-        grounded = Physics.Raycast(playerBody.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
-        MyInput();
-        // maybe need to add speed control
-        if (grounded)
-        {
-            rb.linearDamping = groundDrag;
-        }
-        else
-        {
-            rb.linearDamping = 0;
-        }
-    }
+        // hreyfingar
+        Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y; // vektor af færa input
+        controller.Move(move * speed * Time.deltaTime); // færa af leikmann
+        velocity.y += gravity * Time.deltaTime; // detta
+        controller.Move(velocity * Time.deltaTime); // færa af umhverfi
+        // snúningur
+        transform.Rotate(Vector3.up * lookInput.x * lookSpeed * Time.deltaTime); // snúningur líkama
+        rotationX -= lookInput.y * lookSpeed * Time.deltaTime; // myndavélasnúningur
+        rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit); // ekki brjóta háls spilara
 
-    private void FixedUpdate()
-    {
-        MovePlayer();
-    }
+        playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0); // snúa myndavél
 
-    private void MyInput()
-    {
-        horizontalInput = Input.GetAxisRaw("Horizontal");
-        verticalInput = Input.GetAxisRaw("Vertical");
-        mouseX = Input.GetAxisRaw("Mouse X");
-        mouseY = Input.GetAxisRaw("Mouse Y");
-
-        if (Input.GetKey(jumpKey) && readyToJump && grounded)
-        {
-
-            readyToJump = false;
-
-            Jump();
-
-            Invoke(nameof(ResetJump), jumpCooldown);
-        }
-    }
-    private void MovePlayer()
-    {
-        playerBody.Rotate(Vector3.up * mouseX * mouseSensitivity);
-        moveDir = playerBody.forward * verticalInput + playerBody.right * horizontalInput;
-
-        if (grounded)
-        {
-            rb.AddForce(moveDir.normalized * moveSpeed * 10f, ForceMode.Force);
-        }
-        else if (!grounded)
-        {
-            rb.AddForce(moveDir.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
-        }
-    }
-    private void Jump()
-    {
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
-    }
-    private void ResetJump()
-    {
-        readyToJump = true;
     }
 }
